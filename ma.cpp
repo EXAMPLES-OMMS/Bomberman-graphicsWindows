@@ -4,6 +4,7 @@
 #include <string>
 #include <deque>
 #include <stack>
+#include <ctime>
 using std::string;
 using std::vector;
 
@@ -85,8 +86,8 @@ void rectanglem(int x, int y, int e, int m)
 {
     if (m <= gridBlock / 2)
         // rectangle(x + (gridBlock - m)*(e/gridBlock), y + (gridBlock - m) * (e/gridBlock), x + m * (e/gridBlock), y + m*(e/gridBlock));
-        rectangle(x + m*(e/gridBlock), y + m*(e/gridBlock), x+e - m*(e/gridBlock), y+e - m*(e/gridBlock));
-        // rectangle(x + (m) * (e / gridBlock), y + (m) * (e / gridBlock), x + (gridBlock - m) * (e / gridBlock), y + (gridBlock - m) * (e / gridBlock));
+        rectangle(x + m * (e / gridBlock), y + m * (e / gridBlock), x + e - m * (e / gridBlock), y + e - m * (e / gridBlock));
+    // rectangle(x + (m) * (e / gridBlock), y + (m) * (e / gridBlock), x + (gridBlock - m) * (e / gridBlock), y + (gridBlock - m) * (e / gridBlock));
     // rectangle(x + e * ((gridBlock - m) / gridBlock), y + e * ((gridBlock - m) / gridBlock), x + e * (m / gridBlock), y + e * (m / gridBlock));
     // rectangle(x + e * ((gridBlock - m) / gridBlock), y + e * ((gridBlock - m) / gridBlock), x + e * (m / gridBlock), y + e * (m / gridBlock));
     else
@@ -94,7 +95,7 @@ void rectanglem(int x, int y, int e, int m)
 }
 void circlem(int x, int y, int e, int m)
 {
-    circle(x+e/2, y+e/2, e/2-m*(e/gridBlock));
+    circle(x + e / 2, y + e / 2, e / 2 - m * (e / gridBlock));
 }
 void wall(int x, int y, int e, int color)
 {
@@ -112,27 +113,43 @@ void squ2()
 
 class Bomb
 {
-public:
+    // public:
     float x, y, e;
-    float explTime;
-    float size;
+    float duration;
+    int size;
+    clock_t beginTime;
+    // int beginTime;
 
 public:
     Bomb(int x, int y, int e, BombStats b) : x(x), y(y), e(e)
     {
-        explTime = b.duration;
+        duration = b.duration;
         size = b.size;
+        // beginTime = std::time(NULL);
+        beginTime = std::clock();
     }
+    ~Bomb() {}
     void draw()
     {
         setcolor(9);
         circlem(x, y, e, 1);
     }
+    void exploid()
+    {
+        setcolor(0);
+        circlem(x, y, e, 1);
+    }
+    bool isExploding()
+    {
+        // return true;
+        // return duration < (std::time(NULL) - beginTime);
+        return duration < (float(std::clock() - beginTime) / CLOCKS_PER_SEC);
+    }
 };
 
 class Player
 {
-public:
+    // public:
     float x, y, e;
     float vx, vy;
     int lifes, numBombs, bombsActive;
@@ -145,7 +162,7 @@ public:
         lifes = 1;
         numBombs = 1;
         bombsActive = 0;
-        b.duration = 2;
+        b.duration = 3;
         b.size = 1;
     }
     void draw()
@@ -174,6 +191,13 @@ public:
         numBombs--;
         bombsActive++;
         return new Bomb(x, y, e, b);
+    }
+    void deleteBomb(Bomb *bb)
+    {
+        numBombs++;
+        bombsActive--;
+        bb->exploid();
+        // delete bb;
     }
 };
 
@@ -214,6 +238,7 @@ int main()
     initwindow(1280, 720);
     const int scale = 50;
     Player *pl = new Player(scale, scale, scale);
+    Bomb *a = nullptr;
 
     drawMap(0, 0, scale);
     while (1)
@@ -223,7 +248,7 @@ int main()
         if (kbhit())
         {
             key = getch();
-            std::cout << key << " || ";
+            // std::cout << key << " || ";
             if (key == 'q' || key == 'Q')
             {
                 break;
@@ -250,20 +275,24 @@ int main()
             }
             if (key == SPACE)
             {
-                Bomb *a = pl->putBomb();
-                if (a != nullptr)
-                {
-                    a->draw();
-                }
+                Bomb *aa = pl->putBomb();
+                if (aa != nullptr) a = aa;
             }
         }
+        if (a != nullptr && a->isExploding())
+        {
+            pl->deleteBomb(a);
+            a = nullptr;
+        }
 
-        // drawMap(0, 0, scale);
-        // drawBlocks(0, 0, scale);
+        if (a != nullptr)
+        {
+            a->draw();
+        }
         pl->draw();
 
-        // delay(100);
-        fflush(stdin);
+        // delay(1000);
+        // fflush(stdin);
     }
     // getch();
     closegraph();

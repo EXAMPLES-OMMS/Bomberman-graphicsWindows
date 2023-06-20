@@ -2,10 +2,7 @@
 #include <vector>
 #include <iostream>
 #include <string>
-#include <deque>
-#include <stack>
 #include <ctime>
-#include <math.h>
 using std::string;
 using std::vector;
 
@@ -13,7 +10,9 @@ using std::vector;
 
 #define W 400
 #define D 401
+#define B 501
 
+// Grid graphics for block
 #define cellgrid 12
 
 class Collides;
@@ -24,8 +23,6 @@ class Bomb;
 const int mapHeight = 11;
 const int mapWidth = 15;
 
-// Grid graphics for block
-const int gridBlock = 12;
 
 int map[mapHeight][mapWidth] = {
     {W, W, W, W, W, W, W, W, W, W, W, W, W, W, W},
@@ -142,38 +139,38 @@ public:
         setfillstyle(SOLID_FILL, color);
         rectangle(x, y, x + e, y + e);
     }
-    void Render2(int color)
+    void Render2(int color[4])
     {
-        setfillstyle(SOLID_FILL, color);
-        setcolor(YELLOW);
+        setfillstyle(SOLID_FILL, color[3]);
+        setcolor(color[0]);
         rectangle(x, y, x + e, y + e);
-        setcolor(RED);
+        setcolor(color[1]);
         rectanglem(x, y, e, 3);
-        setcolor(BLUE);
+        setcolor(color[2]);
         rectanglem(x, y, e, 4);
     }
 };
 void rectanglem(int x, int y, int e, int m)
 {
-    if (m <= gridBlock / 2)
-        // rectangle(x + (gridBlock - m)*(e/gridBlock), y + (gridBlock - m) * (e/gridBlock), x + m * (e/gridBlock), y + m*(e/gridBlock));
-        rectangle(x + m * (e / gridBlock), y + m * (e / gridBlock), x + e - m * (e / gridBlock), y + e - m * (e / gridBlock));
-    // rectangle(x + (m) * (e / gridBlock), y + (m) * (e / gridBlock), x + (gridBlock - m) * (e / gridBlock), y + (gridBlock - m) * (e / gridBlock));
-    // rectangle(x + e * ((gridBlock - m) / gridBlock), y + e * ((gridBlock - m) / gridBlock), x + e * (m / gridBlock), y + e * (m / gridBlock));
-    // rectangle(x + e * ((gridBlock - m) / gridBlock), y + e * ((gridBlock - m) / gridBlock), x + e * (m / gridBlock), y + e * (m / gridBlock));
+    if (m <= cellgrid / 2)
+        // rectangle(x + (cellgrid - m)*(e/cellgrid), y + (cellgrid - m) * (e/cellgrid), x + m * (e/cellgrid), y + m*(e/cellgrid));
+        rectangle(x + m * (e / cellgrid), y + m * (e / cellgrid), x + e - m * (e / cellgrid), y + e - m * (e / cellgrid));
+    // rectangle(x + (m) * (e / cellgrid), y + (m) * (e / cellgrid), x + (cellgrid - m) * (e / cellgrid), y + (cellgrid - m) * (e / cellgrid));
+    // rectangle(x + e * ((cellgrid - m) / cellgrid), y + e * ((cellgrid - m) / cellgrid), x + e * (m / cellgrid), y + e * (m / cellgrid));
+    // rectangle(x + e * ((cellgrid - m) / cellgrid), y + e * ((cellgrid - m) / cellgrid), x + e * (m / cellgrid), y + e * (m / cellgrid));
     else
         rectangle(x, y, x + e, y + e);
 }
 void circlem(int x, int y, int e, int m)
 {
-    circle(x + e / 2, y + e / 2, e / 2 - m * (e / gridBlock));
+    circle(x + e / 2, y + e / 2, e / 2 - m * (e / cellgrid));
 }
 void wall(int x, int y, int e, int color)
 {
     Square *w = new Square(x, y, e);
     w->Render1(color);
 }
-void squ1(int x, int y, int e, int color)
+void squ1(int x, int y, int e, int color[4])
 {
     Square *w = new Square(x, y, e);
     w->Render2(color);
@@ -182,38 +179,81 @@ void squ2()
 {
 }
 
+void clearSquare(int x, int y, int e)
+{
+    setcolor(BLACK);
+    int points[] = {x,y, x+e,y, x+e,y+e, x,y+e, x,y};
+    setfillstyle(SOLID_FILL,BLACK);
+    fillpoly(5,points);
+}
+void drawBomb(int x, int y, int e)
+{
+    setcolor(9);
+    circlem(x, y, e, 1);
+}
+
 class Bomb
 {
     // public:
-    float x, y, e;
+    int xj, yi, e;
     float duration;
     int size;
     clock_t beginTime;
     // int beginTime;
+    friend class Player;
 
 public:
-    Bomb(int x, int y, int e, BombStats b) : x(x), y(y), e(e)
+    Bomb(int i, int j, int e, BombStats b) : xj(i), yi(j), e(e)
     {
+        map[yi][xj] = B;
         duration = b.duration;
         size = b.size;
-        // beginTime = std::time(NULL);
         beginTime = std::clock();
     }
     ~Bomb() {}
     void draw()
     {
         setcolor(9);
-        circlem(x, y, e, 1);
+        circlem(xj, yi, e, 1);
+    }
+    void clear()
+    {
+        clearSquare(xj*e, yi*e, e);
+        // setcolor(0);
+        // circlem(xj, yi, e, 1);
     }
     void exploid()
     {
-        setcolor(0);
-        circlem(x, y, e, 1);
+        // undraw(); // bomb position to bomb in map board
+        int i = xj, j = yi, k = 0;
+        while (++k <= this->size && map[j][i+k] == D)//right
+        {
+            map[j][i+k] = 0;
+            clearSquare(j*e,(i+k)*e,e);
+        }
+        k = 0;
+        while (++k <= this->size && map[j][i-k] == D)//left
+        {
+            map[j][i-k] = 0;
+            clearSquare((i-k)*e,j*e,e);
+        }
+        k = 0;
+        while (++k <= this->size && map[j-k][i] == D)//top
+        {
+            map[j-k][i] = 0;
+            clearSquare(i*e,(j-k)*e,e);
+        }
+        k = 0;
+        while (++k <= this->size && map[j+k][i] == D)//bottom
+        {
+            map[j+k][i] = 0;
+            clearSquare(i*e,(j+k)*e,e);
+        }
+        map[yi][xj] = 0;
+        clearSquare(xj*e,yi*e,e);
     }
     bool isExplode()
     {
-        // return true;
-        // return duration < (std::time(NULL) - beginTime);
         return duration < (float(std::clock() - beginTime) / CLOCKS_PER_SEC);
     }
 };
@@ -237,7 +277,7 @@ public:
     {
         height = width = 10*(e/cellgrid);
         vx = vy = 10;
-        lifes = 1;
+        lifes = 2;
         numBombs = 1;
         bombsActive = 0;
         b.duration = 3;
@@ -246,35 +286,36 @@ public:
     void draw()
     {
         setcolor(8);
-        // rectangle(x + e * (1 / gridBlock), y + e * (1 / gridBlock), x + e * (12 / gridBlock), y + e * (12 / gridBlock));
-        // rectangle(x+1*(e/gridBlock),y,x+e,y+e/2);
+        // rectangle(x + e * (1 / cellgrid), y + e * (1 / cellgrid), x + e * (12 / cellgrid), y + e * (12 / cellgrid));
+        // rectangle(x+1*(e/cellgrid),y,x+e,y+e/2);
         // rectanglem(x, y, e, 1);
-        rectangle(x,y,x+width,y+width);
+        rectangle(x,y,x+width,y+height);
     }
     void updateLeft()
     {
-        if (map [y/e][(x-vx)/e] == 0 && map[(y+height)/e][(x-vx)/e] == 0)
+        //FIXME: fix movement when you're on the bomb
+        if ((map [y/e][(x-vx)/e] == 0 && map[(y+height)/e][(x-vx)/e] == 0) || map[y/e][x/e] == B)
         {
             x -= vx;
         }
     }
     void updateRight()
     {
-        if (map [y/e][(x+vx+width)/e] == 0 && map[(y+height)/e][(x+vx+width)/e] == 0)
+        if ((map [y/e][(x+vx+width)/e] == 0 && map[(y+height)/e][(x+vx+width)/e] == 0) || map[y/e][(x+width)/e] == B)
         {
             x += vx;
         }
     }
     void updateTop()
     {
-        if (map[(y-vy)/e][x/e] == 0 && map[(y-vy)/e][(x+width)/e] == 0)
+        if ((map[(y-vy)/e][x/e] == 0 && map[(y-vy)/e][(x+width)/e] == 0) || map[y/e][x/e] == B)
         {
             y -= vy;
         }
     }
     void updateBottom()
     {
-        if (map[(y+vy+height)/e][x/e] == 0 && map[(y+vy+height)/e][(x+width)/e] == 0)
+        if ((map[(y+vy+height)/e][x/e] == 0 && map[(y+vy+height)/e][(x+width)/e] == 0) || map[(y+height)/e][x/e] == B)
         {
             y += vy;
         }
@@ -283,7 +324,10 @@ public:
     {
         setcolor(0);
         // rectanglem(x, y, e, 1);
-        rectangle(x,y,x+width,y+height);
+        int points[] = {x,y, x+width,y, x+width,y+height, x,y+height, x,y};
+        setfillstyle(SOLID_FILL, 0);
+        fillpoly(5,points);
+        // rectangle(x,y,x+width,y+height);
     }
     int getSpeed() { return vx; }
     void updateSpeed(float va = 2) { vx = vy += va; }
@@ -293,15 +337,36 @@ public:
             return nullptr;
         numBombs--;
         bombsActive++;
-        // std::cout << x <<  "," << y << " || " << int(x/e) << "," << int(y/e) << '\n';
-        return new Bomb(int(x/e)*e, int(y/e)*e, e, b);
+        return new Bomb(int((x+width/2)/e), int((y+height/2)/e), e, b);
     }
     void deleteBomb(Bomb *bb)
     {
         numBombs++;
         bombsActive--;
         bb->exploid();
+        
         delete bb;
+    }
+    bool playerCollisionBomb(Bomb *bb)
+    {
+        int i = bb->yi, j = bb->xj, ss = bb->size;
+
+        if(
+            (i == int(y/e) && j == int(x/e)) ||
+            i+ss == int(y/e) || i+ss == int((y+height)/e) ||
+            i-ss == int(y/e) || i-ss == int((y+height)/e) ||
+            j-ss == int(x/e) || j-ss == int((x+width)/e) ||
+            j+ss == int(x/e) || j+ss == int((x+width)/e)
+        ) return 1;
+        return 0;
+    }
+    int dead() {
+        return --lifes;
+    }
+    void setPos(int x, int y) {
+        clearSquare(this->x,this->y,e);
+        this->x = (x+e/cellgrid);
+        this->y = (y+e/cellgrid);
     }
 };
 
@@ -315,8 +380,7 @@ void drawMap(int x, int y, int e)
             int yy = y + i * e;
             if (map[i][j] == W)
             {
-                if (i==0) wall(xx,yy,e,4);
-                else wall(xx, yy, e, GREEN);
+                wall(xx, yy, e, GREEN);
                 
             }
         }
@@ -332,10 +396,21 @@ void drawBlocks(int x, int y, int e)
             int yy = y + i * e;
             if (map[i][j] == D)
             {
-                squ1(xx, yy, e, GREEN);
+                int color[] = {YELLOW, RED, BLUE, BLACK};
+                squ1(xx, yy, e, color);
+            }
+            if (map[i][j] == B)
+            {
+                drawBomb(xx,yy,e);
             }
         }
     }
+}
+
+void start(int e) {
+    drawMap(0,0,e);
+    Player *pl = new Player(e*6, e*1, e);
+    Bomb *a = nullptr;
 }
 
 int main()
@@ -343,7 +418,7 @@ int main()
     int key = -1;
     initwindow(1280, 720);
     const int scale = 50;
-    Player *pl = new Player(50*2, 50*1, scale);
+    Player *pl = new Player(scale*6, scale*1, scale);
     Bomb *a = nullptr;
 
     drawMap(0, 0, scale);
@@ -354,7 +429,6 @@ int main()
         if (kbhit())
         {
             key = getch();
-            // std::cout << key << " || ";
             if (key == 'q' || key == 'Q')
             {
                 break;
@@ -387,14 +461,15 @@ int main()
         }
         if (a != nullptr && a->isExplode())
         {
+            if (pl->playerCollisionBomb(a))
+            {
+                if (pl->dead() < 1) break;
+                pl->setPos(scale*6,scale*1);
+            }
             pl->deleteBomb(a);
             a = nullptr;
         }
 
-        if (a != nullptr)
-        {
-            a->draw();
-        }
         pl->draw();
 
         // delay(1000);

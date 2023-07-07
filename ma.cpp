@@ -3,6 +3,11 @@
 #include <iostream>
 #include <string>
 #include <ctime>
+#include <random>
+#include <queue>
+#include <vector>
+#include <chrono>
+#include <algorithm>
 using std::string;
 using std::vector;
 
@@ -20,9 +25,13 @@ class Square;
 class Player;
 class Bomb;
 
+
+void drawMap(int x, int y, int e);
+void selectWinningCell(int&, int&);
+
+
 const int mapHeight = 11;
 const int mapWidth = 15;
-
 
 int map[mapHeight][mapWidth] = {
     {W, W, W, W, W, W, W, W, W, W, W, W, W, W, W},
@@ -36,6 +45,8 @@ int map[mapHeight][mapWidth] = {
     {W, 0, W, 0, W, 0, W, 0, W, 0, W, 0, W, 0, W},
     {W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W},
     {W, W, W, W, W, W, W, W, W, W, W, W, W, W, W}};
+
+int winCellX = -1, winCellY = -1;
 
 struct Position
 {
@@ -64,6 +75,81 @@ class Collides;
 class Square;
 class Bomb;
 class Player;
+
+void generateRandomMap(int map[mapHeight][mapWidth]) {
+    std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
+    std::uniform_int_distribution<int> distribution(0,9);
+
+    for (int i = 1; i < mapHeight - 1; i++) {
+        for (int j = 1; j < mapWidth - 1; ++j) {
+            map[i][j] = W;
+        }
+    }
+    for(int i = 1; i < mapHeight - 1; i++) {
+        for (int j = 1; j < mapWidth - 1; j++) {
+            if(distribution(rng) < 7) {
+                map[i][j] = 0;
+            }
+        }
+    }
+    for (int i = 1; i < mapHeight - 1; i++) {
+        for (int j = 1; j < mapWidth - 1; j++) {
+            if (map[i][j] == 0 && distribution(rng) < 3) {
+                map[i][j] = D;
+            }
+        }
+    }
+
+    map[1][1] = 0;
+    map[2][1] = 0;
+    map[1][2] = 0;
+}
+
+void selectWinningCell(int& winningCellX, int& winningCellY) {
+    std::mt19937 gen(std::chrono::steady_clock::now().time_since_epoch().count());
+    std::uniform_int_distribution<int> xDistribution(4, mapWidth - 2);
+    std::uniform_int_distribution<int> yDistribution(4, mapHeight - 2);
+
+    do  {
+        winningCellX = xDistribution(gen);
+        winningCellY = yDistribution(gen);
+    } while ( map[winningCellX][winningCellX] == W );
+}
+
+bool canReachExit(int startX, int startY, int exitX, int exitY) {
+    std::queue<std::pair<int, int>> queue;
+    std::vector<std::pair<int, int>> visited;
+
+    if (exitX <= 0 || exitX >= mapHeight - 1 || exitY <= 0 || exitY >= mapWidth - 1) { return false; }
+
+    if (map[exitX][exitY] == W) { return false; }
+
+    queue.push(std::make_pair(startX, startY));
+    visited.push_back(std::make_pair(startX, startY));
+
+    while (!queue.empty()) {
+        std::pair<int, int> current = queue.front();
+        queue.pop();
+
+        int x = current.first;
+        int y = current.second;
+        if (x == exitX && y == exitY) {
+            return true;
+        }
+
+        std::pair<int, int> neighbors[] = {std::make_pair(x - 1, y), std::make_pair(x + 1, y), std::make_pair(x, y - 1), std::make_pair(x, y + 1)};
+        for (const std::pair<int, int>& neighbor : neighbors) {
+            if (neighbor.first >= 0 && neighbor.first < mapHeight && neighbor.second >= 0 && neighbor.second < mapWidth &&
+                std::find(visited.begin(), visited.end(), neighbor) == visited.end() &&
+                map[neighbor.first][neighbor.second] != W) {
+                queue.push(neighbor);
+                visited.push_back(neighbor);
+            }
+        }
+    }
+
+    return false;
+}
 
 class Collides //This collision is only for movement
 {
@@ -225,32 +311,32 @@ public:
     void exploid()
     {
         // undraw(); // bomb position to bomb in map board
-        int i = xj, j = yi, k = 0;
-        while (++k <= this->size && map[j][i+k] == D)//right
-        {
-            map[j][i+k] = 0;
+        int w = 1;
+        int i = yi, j = xj, k, ww;
+
+        map[i][j] = 0;
+        clearSquare(xj*e,yi*e,e);
+        for (k = 1, ww = w; map[i][j+k] != W && k <= this->size && ww > 0; k++) {
+            if(map[i][j+k] == D) ww--;
+            map[i][j+k] = 0;
+            clearSquare((j+k)*e, i*e, e);
+        }
+        for (k = 1, ww = w; map[i][j-k] != W && k <= this->size && ww > 0; k++) {
+            if (map[i][j-k] == D) ww--;
+            map[i][j-k] = 0;
+            clearSquare((j-k)*e,i*e,e);
+        }
+        for (k = 1, ww = w; map[i-k][j] != W && k <= this->size && ww > 0; k++) {
+            if (map[i-k][j] == D) ww--;
+            map[i-k][j] = 0;
+            clearSquare(j*e, (i-k)*e, e);
+        }
+        for (k = 1, ww = w; map[i+k][j] != W && k <= this->size && ww > 0; k++) {
+            if (map[i+k][j] == D) ww--;
+            map[i+k][j] = 0;
             clearSquare(j*e,(i+k)*e,e);
         }
-        k = 0;
-        while (++k <= this->size && map[j][i-k] == D)//left
-        {
-            map[j][i-k] = 0;
-            clearSquare((i-k)*e,j*e,e);
-        }
-        k = 0;
-        while (++k <= this->size && map[j-k][i] == D)//top
-        {
-            map[j-k][i] = 0;
-            clearSquare(i*e,(j-k)*e,e);
-        }
-        k = 0;
-        while (++k <= this->size && map[j+k][i] == D)//bottom
-        {
-            map[j+k][i] = 0;
-            clearSquare(i*e,(j+k)*e,e);
-        }
-        map[yi][xj] = 0;
-        clearSquare(xj*e,yi*e,e);
+        drawMap(0,0,e);
     }
     bool isExplode()
     {
@@ -281,7 +367,7 @@ public:
         numBombs = 1;
         bombsActive = 0;
         b.duration = 3;
-        b.size = 1;
+        b.size = 2;
     }
     void draw()
     {
@@ -293,29 +379,27 @@ public:
     }
     void updateLeft()
     {
-        //FIXME: fix movement when you're on the bomb
-        if ((map [y/e][(x-vx)/e] == 0 && map[(y+height)/e][(x-vx)/e] == 0) || map[y/e][x/e] == B)
-        {
+        if (map [y/e][(x-vx)/e] == 0 && map[(y+height)/e][(x-vx)/e] == 0)       {
             x -= vx;
         }
     }
     void updateRight()
     {
-        if ((map [y/e][(x+vx+width)/e] == 0 && map[(y+height)/e][(x+vx+width)/e] == 0) || map[y/e][(x+width)/e] == B)
+        if (map [y/e][(x+vx+width)/e] == 0 && map[(y+height)/e][(x+vx+width)/e] == 0)
         {
             x += vx;
         }
     }
     void updateTop()
     {
-        if ((map[(y-vy)/e][x/e] == 0 && map[(y-vy)/e][(x+width)/e] == 0) || map[y/e][x/e] == B)
+        if (map[(y-vy)/e][x/e] == 0 && map[(y-vy)/e][(x+width)/e] == 0)
         {
             y -= vy;
         }
     }
     void updateBottom()
     {
-        if ((map[(y+vy+height)/e][x/e] == 0 && map[(y+vy+height)/e][(x+width)/e] == 0) || map[(y+height)/e][x/e] == B)
+        if (map[(y+vy+height)/e][x/e] == 0 && map[(y+vy+height)/e][(x+width)/e] == 0)
         {
             y += vy;
         }
@@ -351,13 +435,12 @@ public:
     {
         int i = bb->yi, j = bb->xj, ss = bb->size;
 
-        if(
-            (i == int(y/e) && j == int(x/e)) ||
-            i+ss == int(y/e) || i+ss == int((y+height)/e) ||
-            i-ss == int(y/e) || i-ss == int((y+height)/e) ||
-            j-ss == int(x/e) || j-ss == int((x+width)/e) ||
-            j+ss == int(x/e) || j+ss == int((x+width)/e)
-        ) return 1;
+        if (i == int(y/e) && j == int(x/e)) return 1;
+        for (int s = 1; map[i+s][j] == 0 && s <= ss; s++) if (i+s == int(y/e) && j == int(x/e)) return 1;
+        for (int s = 1; map[i-s][j] == 0 && s <= ss; s++) if (i-s == int(y/e) && j == int(x/e)) return 1;
+        for (int s = 1; map[i][j+s] == 0 && s <= ss; s++) if (i == int(y/e) && j+s == int(x/e)) return 1;
+        for (int s = 1; map[i][j-s] == 0 && s <= ss; s++) if (i == int(y/e) && j-s == int(x/e)) return 1;
+
         return 0;
     }
     int dead() {
@@ -369,7 +452,12 @@ public:
         this->y = (y+e/cellgrid);
     }
 };
-
+void drawWinningCell(int e) {
+    if (map[winCellX][winCellY] == 0) {
+        Square *w = new Square(winCellX*e, winCellY*e, e);
+        w->Render1(12);
+    }
+}
 void drawMap(int x, int y, int e)
 {
     for (int i = 0; i < mapHeight; i++)
@@ -385,9 +473,11 @@ void drawMap(int x, int y, int e)
             }
         }
     }
+    drawWinningCell(e);
 }
 void drawBlocks(int x, int y, int e)
 {
+    drawWinningCell(e);
     for (int i = 0; i < mapHeight; i++)
     {
         for (int j = 0; j < mapWidth; j++)
@@ -407,20 +497,26 @@ void drawBlocks(int x, int y, int e)
     }
 }
 
-void start(int e) {
-    drawMap(0,0,e);
-    Player *pl = new Player(e*6, e*1, e);
-    Bomb *a = nullptr;
-}
-
 int main()
 {
     int key = -1;
     initwindow(1280, 720);
     const int scale = 50;
-    Player *pl = new Player(scale*6, scale*1, scale);
+
+    Player *pl = new Player(scale*1, scale*1, scale);
     Bomb *a = nullptr;
 
+    selectWinningCell(winCellX, winCellY);
+    int itomms = 0;
+    do {
+        generateRandomMap(map);
+        if (itomms++ > 1000)
+        {
+            selectWinningCell(winCellX, winCellY);
+            itomms = 0;
+        }
+    } while (!canReachExit(1,1,winCellX,winCellY));
+    std::cout << winCellX << " " << winCellY << "\n";
     drawMap(0, 0, scale);
     while (1)
     {
@@ -455,6 +551,7 @@ int main()
             }
             if (key == SPACE)
             {
+                // a = pl->putBomb();
                 Bomb *aa = pl->putBomb();
                 if (aa != nullptr) a = aa;
             }
@@ -464,7 +561,7 @@ int main()
             if (pl->playerCollisionBomb(a))
             {
                 if (pl->dead() < 1) break;
-                pl->setPos(scale*6,scale*1);
+                pl->setPos(scale*1,scale*1);
             }
             pl->deleteBomb(a);
             a = nullptr;

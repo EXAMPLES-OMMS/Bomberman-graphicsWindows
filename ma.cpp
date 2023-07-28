@@ -29,6 +29,8 @@ class Bomb;
 void drawMap(int x, int y, int e);
 void selectWinningCell(int&, int&);
 
+const float scaleSprites = .5;
+const int scale = 50;
 
 const int mapHeight = 11;
 const int mapWidth = 15;
@@ -46,7 +48,33 @@ int map[mapHeight][mapWidth] = {
     {W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W},
     {W, W, W, W, W, W, W, W, W, W, W, W, W, W, W}};
 
-int winCellX = -1, winCellY = -1;
+int winCellX = 0, winCellY = 0;
+
+//colores Bomberman
+const int rosadoClaro = COLOR(240, 160, 216);
+const int rosado= COLOR(248, 56, 104);
+const int rosadoOscuro = COLOR(176, 24, 32);
+const int casiBlanco = COLOR(248, 248, 248);
+const int gris = COLOR(216, 216, 224);
+const int grisOscuro = COLOR(168, 160, 168);
+const int medioAmarilla = COLOR(248, 184, 0);
+const int casiNegro = COLOR(40, 16, 16);
+const int azul = COLOR(0, 104, 224);
+const int celesteOscuro = COLOR(48, 160, 248);
+const int celeste = COLOR(88, 192, 248);
+const int negroClaro = COLOR(40, 40, 40);
+//bomba
+const int casiCeleste = COLOR(72, 208, 240);
+const int casiAzul = COLOR(24, 128, 248);
+const int azulOscuro = COLOR(24, 48, 64);
+const int parecidoAzul = COLOR(32, 80, 136);
+const int amarillo = COLOR(248, 248, 0);
+const int rojo = COLOR(232, 32, 16);
+const int casiGris = COLOR(160, 152, 152);
+//sprites
+void bombermanArriba(int x,int y, float e,int color);
+void bomba(int x, int y, float e, int color);
+
 
 struct Position
 {
@@ -80,21 +108,21 @@ void generateRandomMap(int map[mapHeight][mapWidth]) {
     std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
     std::uniform_int_distribution<int> distribution(0,9);
 
+    // for (int i = 1; i < mapHeight - 1; i++) {
+        // for (int j = 1; j < mapWidth - 1; ++j) {
+            // map[i][j] = W;
+        // }
+    // }
+    // for(int i = 1; i < mapHeight - 1; i++) {
+        // for (int j = 1; j < mapWidth - 1; j++) {
+            // if(distribution(rng) < 7) {
+                // map[i][j] = 0;
+            // }
+        // }
+    // }
     for (int i = 1; i < mapHeight - 1; i++) {
-        for (int j = 1; j < mapWidth - 1; ++j) {
-            map[i][j] = W;
-        }
-    }
-    for(int i = 1; i < mapHeight - 1; i++) {
         for (int j = 1; j < mapWidth - 1; j++) {
-            if(distribution(rng) < 7) {
-                map[i][j] = 0;
-            }
-        }
-    }
-    for (int i = 1; i < mapHeight - 1; i++) {
-        for (int j = 1; j < mapWidth - 1; j++) {
-            if (map[i][j] == 0 && distribution(rng) < 3) {
+            if (map[i][j] == 0 && distribution(rng) < 7) {
                 map[i][j] = D;
             }
         }
@@ -110,10 +138,11 @@ void selectWinningCell(int& winningCellX, int& winningCellY) {
     std::uniform_int_distribution<int> xDistribution(4, mapWidth - 2);
     std::uniform_int_distribution<int> yDistribution(4, mapHeight - 2);
 
-    do  {
+    while ( map[winningCellX][winningCellX] == W )
+    {
         winningCellX = xDistribution(gen);
         winningCellY = yDistribution(gen);
-    } while ( map[winningCellX][winningCellX] == W );
+    } 
 }
 
 bool canReachExit(int startX, int startY, int exitX, int exitY) {
@@ -224,6 +253,12 @@ public:
         setcolor(color);
         setfillstyle(SOLID_FILL, color);
         rectangle(x, y, x + e, y + e);
+        rectangle(x+1, y+1, x + e - 1, y + e - 1);
+        line(x,y, x+e/3, y+e/3);
+        line(x+e,y, x+e-e/3, y+e/3);
+        line(x+e,y+e, x+e-e/3, y+e-e/3);
+        line(x,y+e, x+e/3, y+e-e/3);
+        rectangle(x+e/3,y+e/3, x+e-e/3, y+e-e/3);
     }
     void Render2(int color[4])
     {
@@ -280,12 +315,10 @@ void drawBomb(int x, int y, int e)
 
 class Bomb
 {
-    // public:
     int xj, yi, e;
     float duration;
     int size;
     clock_t beginTime;
-    // int beginTime;
     friend class Player;
 
 public:
@@ -310,7 +343,6 @@ public:
     }
     void exploid()
     {
-        // undraw(); // bomb position to bomb in map board
         int w = 1;
         int i = yi, j = xj, k, ww;
 
@@ -319,22 +351,22 @@ public:
         for (k = 1, ww = w; map[i][j+k] != W && k <= this->size && ww > 0; k++) {
             if(map[i][j+k] == D) ww--;
             map[i][j+k] = 0;
-            clearSquare((j+k)*e, i*e, e);
+            if(map[i][j+k] != B) clearSquare((j+k)*e, i*e, e);
         }
         for (k = 1, ww = w; map[i][j-k] != W && k <= this->size && ww > 0; k++) {
             if (map[i][j-k] == D) ww--;
             map[i][j-k] = 0;
-            clearSquare((j-k)*e,i*e,e);
+            if(map[i][j+k] != B) clearSquare((j-k)*e,i*e,e);
         }
         for (k = 1, ww = w; map[i-k][j] != W && k <= this->size && ww > 0; k++) {
             if (map[i-k][j] == D) ww--;
             map[i-k][j] = 0;
-            clearSquare(j*e, (i-k)*e, e);
+            if(map[i][j+k] != B) clearSquare(j*e, (i-k)*e, e);
         }
         for (k = 1, ww = w; map[i+k][j] != W && k <= this->size && ww > 0; k++) {
             if (map[i+k][j] == D) ww--;
             map[i+k][j] = 0;
-            clearSquare(j*e,(i+k)*e,e);
+            if(map[i][j+k] != B) clearSquare(j*e,(i+k)*e,e);
         }
         drawMap(0,0,e);
     }
@@ -356,18 +388,28 @@ class Player
     int width, height;
     int vx, vy;
     int lifes, numBombs, bombsActive;
+    float rh, rw;
     BombStats b;
 
 public:
-    Player(float x, float y, float e) : x(x+e/cellgrid), y(y+e/cellgrid), e(e)
+    Player(float x, float y, float e) : e(e)
     {
+        // x = x+e/cellgrid;
+        this->x = x;
+        // y = y+e/cellgrid;
+        this->y = y;
         height = width = 10*(e/cellgrid);
+        // width = height = e;
         vx = vy = 10;
         lifes = 2;
         numBombs = 1;
         bombsActive = 0;
         b.duration = 3;
         b.size = 2;
+        //sprite
+        rh = e/(84);
+        rw = e/(53);
+        // width = rh*height;
     }
     void draw()
     {
@@ -375,11 +417,12 @@ public:
         // rectangle(x + e * (1 / cellgrid), y + e * (1 / cellgrid), x + e * (12 / cellgrid), y + e * (12 / cellgrid));
         // rectangle(x+1*(e/cellgrid),y,x+e,y+e/2);
         // rectanglem(x, y, e, 1);
-        rectangle(x,y,x+width,y+height);
+        bombermanFrente(x,y,1);
+        // rectangle(x,y,x+width,y+height);
     }
     void updateLeft()
     {
-        if (map [y/e][(x-vx)/e] == 0 && map[(y+height)/e][(x-vx)/e] == 0)       {
+        if (map [y/e][(x-vx)/e] == 0 && map[(y+height)/e][(x-vx)/e] == 0) {
             x -= vx;
         }
     }
@@ -408,7 +451,8 @@ public:
     {
         setcolor(0);
         // rectanglem(x, y, e, 1);
-        int points[] = {x,y, x+width,y, x+width,y+height, x,y+height, x,y};
+        // int points[] = {x,y, x+width,y, x+width,y+height, x,y+height, x,y};
+        int points[] = {x,y, x+e,y, x+e,y+e, x,y+e, x,y};
         setfillstyle(SOLID_FILL, 0);
         fillpoly(5,points);
         // rectangle(x,y,x+width,y+height);
@@ -421,7 +465,10 @@ public:
             return nullptr;
         numBombs--;
         bombsActive++;
-        return new Bomb(int((x+width/2)/e), int((y+height/2)/e), e, b);
+        int cx = (x+width/2)/e;
+        int cy = (y+height/2)/e;
+        if (map[cx][cy] == B) return nullptr;
+        return new Bomb(cx, cy, e, b);
     }
     void deleteBomb(Bomb *bb)
     {
@@ -451,6 +498,7 @@ public:
         this->x = (x+e/cellgrid);
         this->y = (y+e/cellgrid);
     }
+    void bombermanFrente(int x, int y, int color);
 };
 void drawWinningCell(int e) {
     if (map[winCellX][winCellY] == 0) {
@@ -491,7 +539,8 @@ void drawBlocks(int x, int y, int e)
             }
             if (map[i][j] == B)
             {
-                drawBomb(xx,yy,e);
+                bomba(xx,yy,floor(e/53.0),5);
+                // drawBomb(xx,yy,e);
             }
         }
     }
@@ -501,10 +550,9 @@ int main()
 {
     int key = -1;
     initwindow(1280, 720);
-    const int scale = 50;
 
     Player *pl = new Player(scale*1, scale*1, scale);
-    Bomb *a = nullptr;
+    std::queue<Bomb*> vbombs;
 
     selectWinningCell(winCellX, winCellY);
     int itomms = 0;
@@ -551,28 +599,459 @@ int main()
             }
             if (key == SPACE)
             {
-                // a = pl->putBomb();
                 Bomb *aa = pl->putBomb();
-                if (aa != nullptr) a = aa;
+                if (aa != nullptr) vbombs.push(aa);
             }
         }
-        if (a != nullptr && a->isExplode())
+        if (!vbombs.empty() && (vbombs.front())->isExplode())
         {
-            if (pl->playerCollisionBomb(a))
+            if (pl->playerCollisionBomb(vbombs.front()))
             {
-                if (pl->dead() < 1) break;
-                pl->setPos(scale*1,scale*1);
+                if (pl->dead() == 0) break;
+                pl->setPos(scale*1, scale*1);
             }
-            pl->deleteBomb(a);
-            a = nullptr;
+            pl->deleteBomb(vbombs.front());
+            vbombs.pop();
         }
 
         pl->draw();
 
         // delay(1000);
-        // fflush(stdin);
     }
-    // getch();
     closegraph();
     return 0;
+}
+
+void Player::bombermanFrente(int x,int y, int color){
+    //53*84
+    x += 1;
+    float pp = rh;
+    // rw = rh;
+    {//gorrito
+        setcolor(rosadoClaro);
+        setfillstyle(1, rosadoClaro);
+        bar(x+23*rw,y+4*pp, x+26*rw,y+8*pp);
+
+        setcolor(rosado);
+        setfillstyle(1, rosado);
+        bar(x+26*rw,y+4*pp, x+30*rw,y+8*pp);
+
+        setcolor(rosadoOscuro);
+        setfillstyle(1,rosadoOscuro);
+        bar(x+30*rw,y+4*pp, x+33*rw,y+8*pp);
+    }
+
+    //cabeza
+    {
+        setcolor(casiBlanco);
+        setfillstyle(1, casiBlanco);
+        //de arriba - abajo, izquierda - derecha
+        int cabeza[]={x+14*rw,y+11*pp, x+14*rw,y+15*pp, x+7*rw,y+15*pp, x+7*rw,y+18*pp, x+4*rw,y+18*pp, x+4*rw,y+39*pp, x+7*rw,y+39*pp,
+                        x+7*rw,y+42*pp, x+14*rw,y+42*pp, x+14*rw,y+46*pp, x+39*rw,y+46*pp, x+39*rw,y+42*pp, x+46*rw,y+42*pp, x+46*rw,y+39*pp,
+                        x+49*rw,y+39*pp, x+49*rw,y+18*pp, x+46*rw,y+18*pp, x+46*rw,y+15*pp, x+39*rw,y+15*pp, x+39*rw,y+11*pp, x+14*rw,y+11*pp};
+        fillpoly(21, cabeza);
+    }
+
+    //cabeza detalles claro
+    {
+        setcolor(gris);
+        setfillstyle(1, gris);
+        bar(x+17*rw,y+11*pp, x+36*rw,y+15*pp); bar(x+7*rw,y+15*pp, x+10*rw,y+18*pp); bar(x+33*rw,y+15*pp, x+42*rw,y+18*pp);
+        bar(x+4*rw,y+18*pp, x+7*rw,y+22*pp); bar(x+36*rw,y+18*pp, x+46*rw,y+22*pp); bar(x+42*rw,y+22*pp, x+46*rw,y+39*pp);
+        bar(x+4*rw,y+35*pp, x+7*rw,y+39*pp); bar(x+7*rw,y+39*pp, x+10*rw,y+42*pp); bar(x+39*rw,y+39*pp, x+42*rw,y+42*pp);
+        bar(x+17*rw,y+42*pp, x+20*rw,y+46*pp); bar(x+33*rw,y+42*pp, x+36*rw,y+46*pp);
+    }
+
+    //cabeza detalles oscuro
+    {
+        setcolor(grisOscuro);
+        setfillstyle(1, grisOscuro);
+        bar(x+14*rw,y+11*pp, x+17*rw,y+15*pp); bar(x+36*rw,y+11*pp, x+39*rw,y+15*pp); bar(x+42*rw,y+15*pp, x+46*rw,y+18*pp);
+        bar(x+46*rw,y+18*pp, x+49*rw,y+39*pp); bar(x+42*rw,y+39*pp, x+46*rw,y+42*pp); bar(x+14*rw,y+42*pp, x+17*rw,y+46*pp);
+        bar(x+36*rw,y+42*pp, x+39*rw,y+46*pp);
+    }
+
+    //cara interior
+    {
+        setcolor(medioAmarilla);
+        setfillstyle(1, medioAmarilla);
+        bar(x+14*rw,y+25*pp, x+39*rw,y+39*pp);
+    }
+
+    //ojos
+    {
+        setcolor(casiNegro);
+        setfillstyle(1, casiNegro);
+        bar(x+17*rw,y+25*pp, x+20*rw,y+39*pp); bar(x+33*rw,y+25*pp, x+36*rw,y+39*pp);
+    }
+
+    //cara exterior
+    setcolor(rosado);
+    setfillstyle(1, rosado);
+    bar(x+11*rw,y+22*pp, x+42*rw,y+25*pp); bar(x+11*rw,y+25*pp, x+14*rw,y+39*pp); bar(x+39*rw,y+25*pp, x+42*rw,y+39*pp);
+    bar(x+14*rw,y+39*pp, x+39*rw,y+42*pp);
+
+    //cuerpo exterior
+    setcolor(azul);
+    setfillstyle(1, azul);
+    int cuerpo[]={x+14*rw,y+49*pp, x+14*rw,y+66*pp, x+23*rw,y+66*pp, x+23*rw,y+70*pp, x+30*rw,y+70*pp, x+30*rw,y+66*pp, x+39*rw,y+66*pp,
+                    x+39*rw,y+49*pp, x+14*rw,y+49*pp};
+    fillpoly(9, cuerpo);
+
+    //cuerpo interior oscuro
+    setcolor(celesteOscuro);
+    setfillstyle(1, celesteOscuro);
+    bar(x+17*rw,y+49*pp, x+20*rw,y+52*pp); bar(x+23*rw,y+49*pp, x+30*rw,y+52*pp); bar(x+26*rw,y+52*pp, x+33*rw,y+56*pp);
+    bar(x+26*rw,y+59*pp, x+33*rw,y+63*pp); bar(x+20*rw,y+63*pp, x+30*rw,y+66*pp);
+
+    //cuerpo interior claro
+    setcolor(celeste);
+    setfillstyle(1, celeste);
+    bar(x+20*rw,y+49*pp, x+23*rw,y+52*pp); bar(x+20*rw,y+52*pp, x+26*rw,y+56*pp); bar(x+17*rw,y+59*pp, x+26*rw,y+63*pp);
+
+    //brillo interior
+    setcolor(casiBlanco);
+    setfillstyle(1, casiBlanco);
+    bar(x+17*rw,y+52*pp, x+20*rw,y+56*pp);
+
+    //correa
+    setcolor(negroClaro);
+    setfillstyle(1, negroClaro);
+    bar(x+14*rw,y+56*pp, x+39*rw,y+59*pp);
+
+    //hebilla
+    setcolor(medioAmarilla);
+    setfillstyle(1, medioAmarilla);
+    bar(x+23*rw,y+56*pp, x+30*rw,y+59*pp);
+
+    //brazo derecho
+    setcolor(casiBlanco);
+    setfillstyle(1, casiBlanco);
+    bar(x+10*rw,y+49*pp, x+14*rw,y+52*pp); bar(x+7*rw,y+52*pp, x+10*rw,y+56*pp);
+
+    //mano derecha
+    setcolor(rosado);
+    setfillstyle(1, rosado);
+    bar(x+4*rw,y+56*pp, x+10*rw,y+63*pp);
+
+    //brazo izquierdo
+    setcolor(gris);
+    setfillstyle(1, gris);
+    bar(x+39*rw,y+49*pp, x+42*rw,y+52*pp); bar(x+42*rw,y+52*pp, x+46*rw,y+56*pp);
+
+    //mano izquierda
+    setcolor(rosado);
+    setfillstyle(1, rosado);
+    bar(x+42*rw,y+56*pp, x+49*rw,y+63*pp);
+
+    //sombra manos
+    setcolor(rosadoOscuro);
+    setfillstyle(1, rosadoOscuro);
+    bar(x+7*rw,y+59*pp, x+10*rw,y+63*pp); bar(x+46*rw,y+59*pp, x+49*rw,y+63*pp);
+
+    //pierna derecha
+    setcolor(gris);
+    setfillstyle(1, gris);
+    bar(x+14*rw,y+66*pp, x+23*rw,y+73*pp);
+
+    setcolor(grisOscuro);
+    setfillstyle(1, grisOscuro);
+    bar(x+20*rw,y+66*pp, x+23*rw,y+73*pp);
+
+    setcolor(casiBlanco);
+    setfillstyle(1, casiBlanco);
+    bar(x+14*rw,y+70*pp, x+17*rw,y+73*pp);
+
+    //pierna izquierda
+    setcolor(gris);
+    setfillstyle(1, gris);
+    bar(x+30*rw,y+66*pp, x+39*rw,y+73*pp);
+
+    setcolor(grisOscuro);
+    setfillstyle(1, grisOscuro);
+    bar(x+30*rw,y+66*pp, x+33*rw,y+73*pp); bar(x+36*rw,y+66*pp, x+39*rw,y+70*pp);
+
+    setcolor(casiBlanco);
+    setfillstyle(1, casiBlanco);
+    bar(x+33*rw,y+70*pp, x+36*rw,y+73*pp);
+
+    //pie derecho
+    setcolor(rosado);
+    setfillstyle(1, rosado);
+    bar(x+10*rw,y+73*pp, x+23*rw,y+80*pp);
+
+    setcolor(rosadoOscuro);
+    setfillstyle(1, rosadoOscuro);
+    bar(x+10*rw,y+73*pp, x+14*rw,y+76*pp); bar(x+20*rw,y+73*pp, x+23*rw,y+80*pp); bar(x+7*rw,y+76*pp, x+10*rw,y+80*pp);
+
+    setcolor(rosadoClaro);
+    setfillstyle(1, rosadoClaro);
+    bar(x+14*rw,y+73*pp, x+17*rw,y+76*pp); bar(x+10*rw,y+76*pp, x+14*rw,y+80*pp);
+
+    //pie izquierdo
+    setcolor(rosado);
+    setfillstyle(1, rosado);
+    bar(x+30*rw,y+73*pp, x+42*rw,y+80*pp);
+
+    setcolor(rosadoOscuro);
+    setfillstyle(1, rosadoOscuro);
+    bar(x+30*rw,y+73*pp, x+33*rw,y+80*pp); bar(x+39*rw,y+73*pp, x+42*rw,y+80*pp); bar(x+42*rw,y+76*pp, x+46*rw,y+80*pp);
+
+    setcolor(rosadoClaro);
+    setfillstyle(1, rosadoClaro);
+    bar(x+33*rw,y+73*pp, x+36*rw,y+76*pp);
+
+    //bordes
+    setcolor(casiNegro);
+    setfillstyle(1, casiNegro);
+    bar(x+23*rw,y+1*pp, x+33*rw,y+4*pp); bar(x+20*rw,y+4*pp, x+23*rw,y+8*pp); bar(x+33*rw,y+4*pp, x+36*rw,y+8*pp);
+    bar(x+14*rw,y+8*pp, x+39*rw,y+11*pp); bar(x+7*rw,y+11*pp, x+14*rw,y+15*pp); bar(x+39*rw,y+11*pp, x+46*rw,y+15*pp);
+    bar(x+4*rw,y+15*pp, x+7*rw,y+18*pp); bar(x+46*rw,y+15*pp, x+49*rw,y+18*pp); bar(x+1*rw,y+18*pp, x+4*rw,y+39*pp);
+    bar(x+49*rw,y+18*pp, x+52*rw,y+39*pp); bar(x+4*rw,y+39*pp, x+7*rw,y+42*pp); bar(x+46*rw,y+39*pp, x+49*rw,y+42*pp);
+    bar(x+7*rw,y+42*pp, x+14*rw,y+46*pp); bar(x+39*rw,y+42*pp, x+46*rw,y+46*pp); bar(x+10*rw,y+46*pp, x+42*rw,y+49*pp);
+
+    bar(x+7*rw,y+49*pp, x+10*rw,y+52*pp); bar(x+42*rw,y+49*pp, x+46*rw,y+52*pp); bar(x+4*rw,y+52*pp, x+7*rw,y+56*pp);
+    bar(x+10*rw,y+52*pp, x+14*rw,y+73*pp); bar(x+39*rw,y+52*pp, x+42*rw,y+73*pp); bar(x+46*rw,y+52*pp, x+49*rw,y+56*pp);
+    bar(x+1*rw,y+56*pp, x+4*rw,y+63*pp); bar(x+49*rw,y+56*pp, x+52*rw,y+63*pp); bar(x+4*rw,y+63*pp, x+10*rw,y+66*pp);
+    bar(x+42*rw,y+63*pp, x+49*rw,y+66*pp); bar(x+7*rw,y+70*pp, x+10*rw,y+76*pp); bar(x+42*rw,y+70*pp, x+46*rw,y+76*pp);
+    bar(x+4*rw,y+73*pp, x+7*rw,y+80*pp); bar(x+46*rw,y+73*pp, x+49*rw,y+80*pp); bar(x+23*rw,y+70*pp, x+30*rw,y+80*pp);
+    bar(x+7*rw,y+80*pp, x+46*rw,y+83*pp);
+}
+
+void bombermanArriba(int x,int y, float e,int color){
+    e = std::max(53,84)/scale;
+    //53x84
+    //gorrito
+
+    setcolor(rosadoOscuro);
+    setfillstyle(1,rosadoOscuro);
+    bar(x+23*e,y+4*e, x+33*e,y+14*e);
+
+    setcolor(rosado);
+    setfillstyle(1, rosado);
+    bar(x+23*e,y+4*e, x+30*e,y+11*e);
+
+    setcolor(rosadoClaro);
+    setfillstyle(1, rosadoClaro);
+    bar(x+23*e,y+4*e, x+27*e,y+8*e);
+
+    //cabeza
+    setcolor(casiBlanco);
+    setfillstyle(1, casiBlanco);
+    //de arriba - abajo, izquierda - derecha
+    int cabeza[]={x+14*e,y+11*e, x+14*e,y+14*e, x+7*e,y+14*e, x+7*e,y+18*e, x+4*e,y+18*e, x+4*e,y+38*e, x+7*e,y+38*e,
+                    x+7*e,y+42*e, x+14*e,y+42*e, x+14*e,y+45*e, x+39*e,y+45*e, x+39*e,y+42*e, x+46*e,y+42*e, x+46*e,y+38*e,
+                    x+49*e,y+38*e, x+49*e,y+18*e, x+20*e,y+18*e, x+20*e,y+11*e, x+14*e,y+11*e};
+    fillpoly(19, cabeza);
+
+    //cabeza detalles claro
+    setcolor(gris);
+    setfillstyle(1, gris);
+    bar(x+17*e,y+11*e, x+20*e,y+14*e); bar(x+7*e,y+14*e, x+11*e,y+18*e); bar(x+20*e,y+14*e, x+23*e,y+18*e);
+    bar(x+30*e,y+14*e, x+46*e,y+21*e); bar(x+4*e,y+18*e, x+7*e,y+21*e); bar(x+36*e,y+21*e, x+46*e,y+25*e);
+    bar(x+39*e,y+25*e, x+46*e,y+42*e); bar(x+4*e,y+35*e, x+7*e,y+38*e); bar(x+7*e,y+38*e, x+11*e,y+42*e); 
+    bar(x+36*e,y+38*e, x+39*e,y+42*e); bar(x+17*e,y+42*e, x+20*e,y+45*e); bar(x+33*e,y+42*e, x+36*e,y+45*e);
+
+    //cabeza detalles oscuro
+    setcolor(grisOscuro);
+    setfillstyle(1, grisOscuro);
+    bar(x+14*e,y+11*e, x+17*e,y+14*e); bar(x+36*e,y+11*e, x+39*e,y+14*e); bar(x+33*e,y+14*e, x+36*e,y+18*e);
+    bar(x+43*e,y+14*e, x+46*e,y+18*e); bar(x+46*e,y+18*e, x+49*e,y+38*e); bar(x+43*e,y+38*e, x+46*e,y+42*e);
+    bar(x+14*e,y+42*e, x+17*e,y+45*e); bar(x+36*e,y+42*e, x+39*e,y+45*e);
+
+    //cuerpo exterior
+    setcolor(azul);
+    setfillstyle(1, azul);
+    int cuerpo[]={x+14*e,y+49*e, x+14*e,y+66*e, x+23*e,y+66*e, x+23*e,y+69*e, x+30*e,y+69*e, x+30*e,y+66*e, x+39*e,y+66*e,
+                    x+39*e,y+49*e, x+14*e,y+49*e};
+    fillpoly(9, cuerpo);
+
+    //cuerpo interior claro
+    setcolor(celeste);
+    setfillstyle(1, celeste);
+    bar(x+17*e,y+49*e, x+30*e,y+62*e);
+
+    //cuerpo interior oscuro
+    setcolor(celesteOscuro);
+    setfillstyle(1, celesteOscuro);
+    bar(x+17*e,y+49*e, x+20*e,y+52*e); bar(x+23*e,y+49*e, x+30*e,y+52*e); bar(x+27*e,y+52*e, x+33*e,y+56*e);
+    bar(x+30*e,y+59*e, x+33*e,y+62*e); bar(x+20*e,y+62*e, x+30*e,y+66*e);    
+
+    //brillo interior
+    setcolor(casiBlanco);
+    setfillstyle(1, casiBlanco);
+    bar(x+17*e,y+52*e, x+20*e,y+56*e);
+
+    //correa
+    setcolor(negroClaro);
+    setfillstyle(1, negroClaro);
+    bar(x+14*e,y+56*e, x+39*e,y+59*e);
+
+    //brazo derecho
+    setcolor(gris);
+    setfillstyle(1, gris);
+    bar(x+39*e,y+49*e, x+43*e,y+52*e); bar(x+43*e,y+52*e, x+46*e,y+56*e);
+
+    //mano derecha
+    setcolor(rosado);
+    setfillstyle(1, rosado);
+    bar(x+43*e,y+56*e, x+49*e,y+62*e);
+
+    //brazo izquierdo
+    setcolor(casiBlanco);
+    setfillstyle(1, casiBlanco);
+    bar(x+11*e,y+49*e, x+14*e,y+52*e); bar(x+7*e,y+52*e, x+11*e,y+56*e);
+
+    //mano izquierda
+    setcolor(rosado);
+    setfillstyle(1, rosado);
+    bar(x+4*e,y+56*e, x+11*e,y+62*e);
+
+    //sombra manos
+    setcolor(rosadoOscuro);
+    setfillstyle(1, rosadoOscuro);
+    bar(x+7*e,y+59*e, x+11*e,y+62*e); bar(x+46*e,y+59*e, x+49*e,y+62*e);
+
+    //pierna derecha
+    setcolor(gris);
+    setfillstyle(1, gris);
+    bar(x+30*e,y+66*e, x+39*e,y+73*e);
+
+    setcolor(grisOscuro);
+    setfillstyle(1, grisOscuro);
+    bar(x+30*e,y+66*e, x+33*e,y+73*e); bar(x+36*e,y+66*e, x+39*e,y+69*e);
+
+    setcolor(casiBlanco);
+    setfillstyle(1, casiBlanco);
+    bar(x+33*e,y+69*e, x+36*e,y+73*e);
+
+    //pierna izquierda
+    setcolor(gris);
+    setfillstyle(1, gris);
+    bar(x+14*e,y+66*e, x+20*e,y+73*e);
+
+    setcolor(grisOscuro);
+    setfillstyle(1, grisOscuro);
+    bar(x+20*e,y+66*e, x+23*e,y+73*e);
+
+    setcolor(casiBlanco);
+    setfillstyle(1, casiBlanco);
+    bar(x+14*e,y+69*e, x+17*e,y+73*e);
+
+    //pie derecho
+    setcolor(rosado);
+    setfillstyle(1, rosado);
+    bar(x+33*e,y+73*e, x+39*e,y+80*e);
+
+    setcolor(rosadoOscuro);
+    setfillstyle(1, rosadoOscuro);
+    bar(x+30*e,y+73*e, x+33*e,y+80*e); bar(x+39*e,y+73*e, x+43*e,y+76*e); bar(x+36*e,y+76*e, x+39*e,y+80*e);
+
+    //pie izquierdo
+    setcolor(rosado);
+    setfillstyle(1, rosado);
+    bar(x+14*e,y+73*e, x+20*e,y+80*e);
+
+    setcolor(rosadoOscuro);
+    setfillstyle(1, rosadoOscuro);
+    bar(x+11*e,y+73*e, x+14*e,y+76*e); bar(x+20*e,y+73*e, x+23*e,y+80*e); bar(x+14*e,y+76*e, x+17*e,y+80*e);
+
+    //bordes
+    setcolor(casiNegro);
+    setfillstyle(1, casiNegro);
+    bar(x+23*e,y+1*e, x+33*e,y+4*e); bar(x+20*e,y+4*e, x+23*e,y+14*e); bar(x+33*e,y+4*e, x+36*e,y+14*e);
+    bar(x+14*e,y+8*e, x+20*e,y+11*e); bar(x+36*e,y+8*e, x+39*e,y+11*e); bar(x+7*e,y+11*e, x+14*e,y+14*e);
+    bar(x+39*e,y+11*e, x+46*e,y+14*e); bar(x+4*e,y+14*e, x+7*e,y+18*e); bar(x+23*e,y+14*e, x+33*e,y+18*e);
+    bar(x+46*e,y+14*e, x+49*e,y+18*e); bar(x+1*e,y+18*e, x+4*e,y+38*e); bar(x+49*e,y+18*e, x+52*e,y+38*e);
+    bar(x+4*e,y+38*e, x+7*e,y+42*e); bar(x+46*e,y+38*e, x+49*e,y+42*e); bar(x+7*e,y+42*e, x+14*e,y+45*e);
+    bar(x+39*e,y+42*e, x+46*e,y+45*e); bar(x+11*e,y+45*e, x+43*e,y+49*e); 
+    
+    bar(x+7*e,y+49*e, x+11*e,y+52*e); bar(x+43*e,y+49*e, x+46*e,y+52*e); bar(x+4*e,y+52*e, x+7*e,y+56*e); 
+    bar(x+11*e,y+52*e, x+14*e,y+73*e); bar(x+39*e,y+52*e, x+43*e,y+73*e); bar(x+46*e,y+52*e, x+49*e,y+56*e);
+    bar(x+1*e,y+56*e, x+4*e,y+62*e); bar(x+49*e,y+56*e, x+52*e,y+62*e); bar(x+4*e,y+62*e, x+11*e,y+66*e);
+    bar(x+43*e,y+62*e, x+49*e,y+66*e); bar(x+7*e,y+69*e, x+11*e,y+83*e); bar(x+43*e,y+69*e, x+46*e,y+83*e);
+    bar(x+4*e,y+73*e, x+7*e,y+80*e); bar(x+46*e,y+73*e, x+49*e,y+80*e); bar(x+11*e,y+76*e, x+14*e,y+80*e);
+    bar(x+39*e,y+76*e, x+43*e,y+80*e); bar(x+7*e,y+80*e, x+46*e,y+83*e); bar(x+23*e,y+69*e, x+30*e,y+80*e);
+
+    //punto negro en gorro
+    setcolor(negroClaro);
+    setfillstyle(1, negroClaro);
+    bar(x+27*e,y+18*e, x+30*e,y+21*e); 
+}
+
+void bomba(int x, int y, float e, int color){
+    e = std::max(55,53)/scale;
+    //55x53
+    //de fuera para dentro arriba - abajo, izquierda- derecha
+    //bomba exterior
+    setcolor(azulOscuro);
+    setfillstyle(1, azulOscuro);
+    //de arriba - abajo, izquierda - derecha
+    int bombaExterior[]={x+30*e,y+7*e, x+4*e,y+31*e, x+4*e,y+37*e, x+6*e,y+37*e, x+6*e,y+43*e, x+11*e,y+43*e, x+11*e,y+48*e,
+                    x+16*e,y+48*e, x+16*e,y+50*e, x+35*e,y+50*e, x+40*e,y+45*e, x+49*e,y+45*e, x+49*e,y+21*e, x+43*e,y+21*e,
+                    x+43*e,y+7*e, x+30*e,y+7*e};
+    fillpoly(16, bombaExterior);
+    
+    //bomba medio
+    setcolor(parecidoAzul);
+    setfillstyle(1, parecidoAzul);
+    int bombaMedio[]={x+17*e,y+7*e, x+17*e,y+11*e, x+11*e,y+11*e, x+11*e,y+14*e, x+7*e,y+14*e, x+7*e,y+18*e, x+4*e,y+18*e,
+                    x+4*e,y+31*e, x+7*e,y+31*e, x+7*e,y+35*e, x+11*e,y+35*e, x+11*e,y+38*e, x+17*e,y+38*e, x+17*e,y+42*e,
+                    x+30*e,y+42*e, x+30*e,y+38*e, x+36*e,y+38*e, x+36*e,y+35*e, x+39*e,y+35*e, x+39*e,y+28*e, x+33*e,y+28*e,                    
+                    x+33*e,y+25*e, x+30*e,y+25*e, x+30*e,y+21*e, x+27*e,y+21*e, x+27*e,y+11*e, x+30*e,y+11*e, x+30*e,y+7*e,
+                    x+17*e,y+7*e};
+    fillpoly(29, bombaMedio);
+
+    //brillo
+    setcolor(casiBlanco);
+    setfillstyle(1,casiBlanco);
+    bar(x+20*e,y+11*e, x+23*e,y+14*e); bar(x+11*e,y+18*e, x+17*e,y+25*e);
+    
+    setcolor(casiCeleste);
+    setfillstyle(1, casiCeleste);
+    bar(x+17*e,y+11*e, x+20*e,y+14*e); bar(x+7*e,y+18*e, x+11*e,y+25*e); bar(x+17*e,y+18*e, x+20*e,y+25*e);
+    bar(x+11*e,y+25*e, x+17*e,y+28*e);
+
+    setcolor(casiAzul);
+    setfillstyle(1, casiAzul);
+    bar(x+20*e,y+7*e, x+23*e,y+11*e); bar(x+23*e,y+11*e, x+27*e,y+14*e); bar(x+11*e,y+14*e, x+17*e,y+18*e);
+    bar(x+20*e,y+14*e, x+23*e,y+18*e); bar(x+7*e,y+25*e, x+11*e,y+28*e); bar(x+17*e,y+25*e, x+20*e,y+28*e);
+    bar(x+11*e,y+28*e, x+17*e,y+31*e);
+
+    //mecha
+    setcolor(rojo);
+    setfillstyle(1, rojo);
+    bar(x+46*e,y+1*e, x+49*e,y+4*e); bar(x+43*e,y+4*e, x+46*e,y+11*e); bar(x+49*e,y+4*e, x+52*e,y+11*e);
+
+    setcolor(amarillo);
+    setfillstyle(1, amarillo);
+    bar(x+46*e,y+4*e, x+49*e,y+11*e);
+
+    setcolor(casiGris);
+    setfillstyle(1, casiGris);
+    bar(x+30*e,y+11*e, x+33*e,y+14*e); bar(x+43*e,y+11*e, x+46*e,y+14*e); bar(x+36*e,y+14*e, x+43*e,y+18*e);
+    bar(x+43*e,y+18*e, x+46*e,y+21*e); bar(x+33*e,y+21*e, x+36*e,y+25*e); bar(x+39*e,y+21*e, x+43*e,y+25*e);
+
+    setcolor(gris);
+    setfillstyle(1, gris);
+    bar(x+33*e,y+11*e, x+36*e,y+14*e); bar(x+39*e,y+11*e, x+43*e,y+14*e); bar(x+30*e,y+18*e, x+36*e,y+21*e);
+    bar(x+36*e,y+21*e, x+39*e,y+25*e);
+
+    setcolor(casiNegro);
+    setfillstyle(1, casiNegro);
+    bar(x+36*e,y+11*e, x+39*e,y+14*e); bar(x+33*e,y+14*e, x+36*e,y+18*e); bar(x+43*e,y+14*e, x+46*e,y+18*e);
+    bar(x+36*e,y+18*e, x+43*e,y+21*e);
+
+    setcolor(casiBlanco);
+    setfillstyle(1, casiBlanco);
+    bar(x+30*e,y+14*e, x+33*e,y+18*e);
+
+    //bombaExterior
+    setcolor(casiNegro);
+    setfillstyle(1,casiNegro);
+    bar(x+17*e,y+4*e, x+36*e,y+7*e); bar(x+11*e,y+7*e, x+17*e,y+11*e); bar(x+36*e,y+7*e, x+43*e,y+11*e);
+    bar(x+7*e,y+11*e, x+11*e,y+14*e); bar(x+46*e,y+11*e, x+49*e,y+21*e); bar(x+4*e,y+14*e, x+7*e,y+18*e);
+    bar(x+1*e,y+18*e, x+4*e,y+38*e); bar(x+49*e,y+21*e, x+52*e,y+38*e); bar(x+4*e,y+35*e, x+7*e,y+45*e);
+    bar(x+46*e,y+35*e, x+49*e,y+45*e); bar(x+7*e,y+42*e, x+11*e,y+49*e); bar(x+43*e,y+42*e, x+46*e,y+49*e);
+    bar(x+11*e,y+45*e, x+17*e,y+49*e); bar(x+36*e,y+45*e, x+46*e,y+49*e); bar(x+14*e,y+49*e, x+39*e,y+52*e);
 }
